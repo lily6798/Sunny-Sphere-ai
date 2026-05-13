@@ -92,7 +92,6 @@ const { useState, useEffect, useCallback } = React;
 /* ── Constants ── */
 const ACCESS_PASSWORD = 'Sunny2026';
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwYVGqqmFQTl77fK5K6-b4OiGIaqaiHtDXO1AUs89tTJF6uuB2sQ7aGbFRsND0RUaSM4g/exec';
-const TOOL_CATEGORIES = ['All', 'Content', 'Paid Ads', 'Strategy', 'Analytics', 'Productivity', 'Design'];
 const POPULAR_SEARCHES = ['ChatGPT', 'Image generation', 'Copywriting', 'Scheduling', 'Analytics'];
 
 /* ── Helpers ── */
@@ -214,17 +213,20 @@ function ToolsTab({ tools, looms, onNavigateToAiId }) {
   const [activeCategory, setActiveCategory] = useState('All');
   const [loomExpanded, setLoomExpanded] = useState(true);
 
+  // Dynamically build categories from tools data
+  const toolCategories = ['All', ...Array.from(new Set(tools.map(t => t.category).filter(Boolean))).sort()];
+
   const applySearch = term => { setSearchInput(term); setActiveSearch(term); };
 
   const filteredTools = tools.filter(tool => {
-    const matchCat = activeCategory === 'All' || tool.category.toLowerCase() === activeCategory.toLowerCase();
+    const matchCat = activeCategory === 'All' || (tool.category && tool.category.toLowerCase() === activeCategory.toLowerCase());
     const q = activeSearch.toLowerCase();
-    const matchSearch = !q || tool.name.toLowerCase().includes(q) || tool.description.toLowerCase().includes(q) || tool.tags.toLowerCase().includes(q) || tool.category.toLowerCase().includes(q);
+    const matchSearch = !q || tool.name.toLowerCase().includes(q) || tool.description.toLowerCase().includes(q) || tool.tags.toLowerCase().includes(q) || (tool.category && tool.category.toLowerCase().includes(q));
     return matchCat && matchSearch;
   });
 
   const filteredLooms = looms.filter(loom =>
-    activeCategory === 'All' || loom.category.toLowerCase() === activeCategory.toLowerCase()
+    activeCategory === 'All' || (loom.category && loom.category.toLowerCase() === activeCategory.toLowerCase())
   );
 
   const noResults = filteredTools.length === 0;
@@ -249,7 +251,7 @@ function ToolsTab({ tools, looms, onNavigateToAiId }) {
       {/* Category filter strip */}
       <div style={{ background: '#fff', borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
         <div style={{ maxWidth: 1280, margin: '0 auto', padding: '14px 24px', display: 'flex', gap: 8, overflowX: 'auto' }}>
-          {TOOL_CATEGORIES.map(cat => (
+          {toolCategories.map(cat => (
             <button key={cat} className={`filter-pill${activeCategory === cat ? ' active' : ''}`} onClick={() => setActiveCategory(cat)}>{cat}</button>
           ))}
         </div>
@@ -568,7 +570,7 @@ function App() {
       ]);
       const [td, ld, sd, tipd] = await Promise.all([toolsRes.json(), loomsRes.json(), skillsRes.json(), tipsRes.json()]);
 
-      if (td.status === 'success') setTools(parseRows(td.data).map(r => ({ name: pick(r,'tool_name','name'), category: pick(r,'category'), description: pick(r,'description'), emoji: pick(r,'emoji')||'🔧', toolLink: pick(r,'tool_link','link','url'), tags: pick(r,'tags','tag'), status: pick(r,'status') })));
+      if (td.status === 'success') setTools(parseRows(td.data).map(r => ({ name: pick(r,'tool_name','name'), category: pick(r,'category_2','category'), description: pick(r,'description'), emoji: pick(r,'emoji')||'🔧', toolLink: pick(r,'tool_link','link','url'), tags: pick(r,'tags','tag'), status: pick(r,'status') })));
       if (ld.status === 'success') setLooms(parseRows(ld.data).map(r => ({ title: pick(r,'title'), category: pick(r,'category'), description: pick(r,'description'), loomLink: pick(r,'loom_link','link','url'), duration: pick(r,'duration') })));
       if (sd.status === 'success') setSkills(parseRows(sd.data).map(r => ({ skill: pick(r,'skill'), fileLink: pick(r,'file_link','link','url'), category: pick(r,'category'), tag: pick(r,'tag','tags') })));
       if (tipd.status === 'success') setTips(parseRows(tipd.data).map(r => ({ tip: pick(r,'tip'), content: pick(r,'content'), postedBy: pick(r,'posted_by','postedby','author'), tag: pick(r,'tag','tags'), likes: parseInt(pick(r,'likes')||'0',10)||0 })));
