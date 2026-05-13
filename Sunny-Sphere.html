@@ -147,10 +147,8 @@ function Logo({ size = 'md' }) {
   const big = size === 'lg';
   return (
     <div style={{ textAlign: big ? 'center' : 'left' }}>
-      <div style={{ fontSize: big ? 36 : 15, fontWeight: 800, color: '#1a1a1a', display: 'flex', alignItems: 'center', gap: 6, justifyContent: big ? 'center' : 'flex-start', letterSpacing: '-0.01em' }}>
-        ☀️ Sunny Sphere
-      </div>
-      <div style={{ fontSize: big ? 12 : 11, color: '#888580', fontWeight: 400, marginTop: big ? 2 : 1 }}>Sunny Sphere</div>
+      <img src="logo.png" alt="Sunny Advertising" style={{ height: big ? 52 : 26, width: 'auto', display: 'block', margin: big ? '0 auto 8px' : '0 0 2px' }} />
+      <div style={{ fontSize: big ? 12 : 11, color: '#888580', fontWeight: 400 }}>AI Tool Hub</div>
     </div>
   );
 }
