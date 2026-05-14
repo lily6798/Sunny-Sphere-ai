@@ -568,7 +568,7 @@ function App() {
       ]);
       const [td, ld, sd, tipd] = await Promise.all([toolsRes.json(), loomsRes.json(), skillsRes.json(), tipsRes.json()]);
 
-      if (td.status === 'success') setTools(parseRows(td.data).map(r => ({ name: pick(r,'tool_name','name'), category: pick(r,'tool_category','category_2','category'), description: pick(r,'description'), emoji: pick(r,'emoji')||'🔧', toolLink: pick(r,'tool_link','link','url'), tags: pick(r,'tags','tag'), status: pick(r,'status') })));
+      if (td.status === 'success') setTools(parseRows(td.data).map(r => ({ name: pick(r,'tool_name','name'), category: pick(r,'category'), description: pick(r,'description'), emoji: pick(r,'emoji')||'🔧', toolLink: pick(r,'tool_link','link','url'), tags: pick(r,'tags','tag'), status: pick(r,'status') })));
       if (ld.status === 'success') setLooms(parseRows(ld.data).map(r => ({ title: pick(r,'title'), category: pick(r,'category'), description: pick(r,'description'), loomLink: pick(r,'loom_link','link','url'), duration: pick(r,'duration') })));
       if (sd.status === 'success') setSkills(parseRows(sd.data).map(r => ({ skill: pick(r,'skill'), fileLink: pick(r,'file_link','link','url'), category: pick(r,'category'), tag: pick(r,'tag','tags') })));
       if (tipd.status === 'success') setTips(parseRows(tipd.data).map(r => ({ tip: pick(r,'tip'), content: pick(r,'content'), postedBy: pick(r,'posted_by','postedby','author'), tag: pick(r,'tag','tags'), likes: parseInt(pick(r,'likes')||'0',10)||0 })));
