@@ -468,38 +468,6 @@ function SkillLibraryTab({ tips, skills }) {
   );
 }
 
-/* ── Could This Be AI'd? Tab ── */
-function AiIdTab({ prefilledProblem }) {
-  const [name, setName] = useState('');
-  const [problem, setProblem] = useState('');
-  const [timeTaken, setTimeTaken] = useState('');
-  const [othersInvolved, setOthersInvolved] = useState('');
-  const [currentProcess, setCurrentProcess] = useState('');
-  const [idealOutcome, setIdealOutcome] = useState('');
-  const [website, setWebsite] = useState('');
-  const [status, setStatus] = useState('idle');
-
-  useEffect(() => { if (prefilledProblem) setProblem(prefilledProblem); }, [prefilledProblem]);
-
-  const reset = () => { setName(''); setProblem(''); setTimeTaken(''); setOthersInvolved(''); setCurrentProcess(''); setIdealOutcome(''); setWebsite(''); };
-
-  const handleSubmit = async e => {
-    e.preventDefault(); setStatus('loading');
-    try {
-      await fetch(APPS_SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ name, problem, timeTaken, othersInvolved, currentProcess, idealOutcome, website }) });
-      setStatus('success'); reset();
-    } catch { setStatus('error'); }
-  };
-
-  function Field({ label, children }) {
-  return (
-    <div>
-      <label style={{ display: 'block', fontWeight: 600, fontSize: 14, color: '#1a1a1a', marginBottom: 8 }}>{label}</label>
-      {children}
-    </div>
-  );
-}
-
 function Field({ label, children }) {
   return (
     <div>
@@ -562,7 +530,7 @@ function AiIdTab({ prefilledProblem }) {
     </div>
   );
 }
-
+  
 /* ── Error State ── */
 function ErrorState({ onRetry }) {
   return (
