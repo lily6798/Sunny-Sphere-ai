@@ -500,32 +500,56 @@ function AiIdTab({ prefilledProblem }) {
   );
 }
 
+function Field({ label, children }) {
+  return (
+    <div>
+      <label style={{ display: 'block', fontWeight: 600, fontSize: 14, color: '#1a1a1a', marginBottom: 8 }}>{label}</label>
+      {children}
+    </div>
+  );
+}
+
 /* ── Could This Be AI'd? Tab ── */
 function AiIdTab({ prefilledProblem }) {
+  const [name, setName] = useState('');
+  const [problem, setProblem] = useState('');
+  const [timeTaken, setTimeTaken] = useState('');
+  const [othersInvolved, setOthersInvolved] = useState('');
+  const [currentProcess, setCurrentProcess] = useState('');
+  const [idealOutcome, setIdealOutcome] = useState('');
+  const [website, setWebsite] = useState('');
+  const [status, setStatus] = useState('idle');
+
+  useEffect(() => { if (prefilledProblem) setProblem(prefilledProblem); }, [prefilledProblem]);
+
+  const reset = () => { setName(''); setProblem(''); setTimeTaken(''); setOthersInvolved(''); setCurrentProcess(''); setIdealOutcome(''); setWebsite(''); };
+
+  const handleSubmit = async e => {
+    e.preventDefault(); setStatus('loading');
+    try {
+      await fetch(APPS_SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ name, problem, timeTaken, othersInvolved, currentProcess, idealOutcome, website }) });
+      setStatus('success'); reset();
+    } catch { setStatus('error'); }
+  };
 
   return (
     <div style={{ maxWidth: 720, margin: '0 auto', padding: '48px 24px 80px' }}>
       <h1 style={{ fontSize: 28, fontWeight: 800, color: '#1a1a1a', marginBottom: 10, letterSpacing: '-0.02em' }}>Could this be AI'd? 💡</h1>
       <p style={{ color: '#888580', fontSize: 14, lineHeight: 1.6, marginBottom: 24 }}>Think a task in your workflow could be automated or improved with AI? Tell the AI Champs and we'll look into it.</p>
-
       <div style={{ background: 'rgba(232,160,32,0.08)', border: '1px solid rgba(232,160,32,0.25)', borderRadius: 12, padding: '14px 18px', marginBottom: 36, fontSize: 14, color: '#1a1a1a', lineHeight: 1.5 }}>
         ✨ Already looked for a tool and couldn't find it? You're in the right place. Tell us what you need below.
       </div>
-
       {status === 'success' && <div style={{ background: 'rgba(56,161,105,0.1)', border: '1px solid rgba(56,161,105,0.35)', borderRadius: 10, padding: '14px 18px', marginBottom: 28, fontSize: 14, fontWeight: 600, color: '#276749' }}>Submitted! The AI Champs will review your task. ✅</div>}
       {status === 'error' && <div style={{ background: 'rgba(229,62,62,0.08)', border: '1px solid rgba(229,62,62,0.3)', borderRadius: 10, padding: '14px 18px', marginBottom: 28, fontSize: 14, fontWeight: 600, color: '#c53030' }}>Something went wrong — please try again.</div>}
-
       <form onSubmit={handleSubmit}>
-        {/* Honeypot */}
         <div style={{ display: 'none' }} aria-hidden="true">
           <input type="text" name="website" value={website} onChange={e => setWebsite(e.target.value)} tabIndex={-1} autoComplete="off" />
         </div>
-
         <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
           <Field label="Your name"><input type="text" value={name} onChange={e => setName(e.target.value)} placeholder="Jane Smith" className="form-input" /></Field>
           <Field label="What problem are you wanting solved?"><textarea value={problem} onChange={e => setProblem(e.target.value)} placeholder="Describe the task or problem you'd like AI to help with…" className="form-textarea" style={{ minHeight: 110 }} /></Field>
-          <Field label="How often and how long does this take?"><input type="text" value={timeTaken} onChange={e => setTimeTaken(e.target.value)} placeholder="e.g. Daily, takes about 30 minutes each time" className="form-input" /></Field>
-          <Field label="Who else in the office does this task?"><input type="text" value={othersInvolved} onChange={e => setOthersInvolved(e.target.value)} placeholder="e.g. The whole account management team" className="form-input" /></Field>
+          <Field label="How often and how long does this take?"><textarea value={timeTaken} onChange={e => setTimeTaken(e.target.value)} placeholder="e.g. Daily, takes about 30 minutes each time" className="form-textarea" /></Field>
+          <Field label="Who else in the office does this task?"><textarea value={othersInvolved} onChange={e => setOthersInvolved(e.target.value)} placeholder="e.g. The whole account management team" className="form-textarea" /></Field>
           <Field label="What is the current process?"><textarea value={currentProcess} onChange={e => setCurrentProcess(e.target.value)} placeholder="Walk us through the steps you currently follow…" className="form-textarea" /></Field>
           <Field label="What is the ideal end outcome?"><textarea value={idealOutcome} onChange={e => setIdealOutcome(e.target.value)} placeholder="Describe what success looks like — what would you get back?" className="form-textarea" /></Field>
           <div style={{ marginTop: 4 }}>
