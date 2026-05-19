@@ -491,12 +491,17 @@ function AiIdTab({ prefilledProblem }) {
     } catch { setStatus('error'); }
   };
 
-  const Field = ({ label, children }) => (
+  function Field({ label, children }) {
+  return (
     <div>
       <label style={{ display: 'block', fontWeight: 600, fontSize: 14, color: '#1a1a1a', marginBottom: 8 }}>{label}</label>
       {children}
     </div>
   );
+}
+
+/* ── Could This Be AI'd? Tab ── */
+function AiIdTab({ prefilledProblem }) {
 
   return (
     <div style={{ maxWidth: 720, margin: '0 auto', padding: '48px 24px 80px' }}>
