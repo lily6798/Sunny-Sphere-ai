@@ -8,7 +8,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
   <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.23.9/babel.min.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root { --gold: #E8A020; --black: #1a1a1a; --muted: #888580; --font: 'Poppins', 'Inter', -apple-system, sans-serif; }
@@ -76,35 +76,39 @@ function parseRows(data) {
   const headers = data[0].map(h => h.toLowerCase().trim().replace(/\s+/g, '_'));
   return data.slice(1).filter(row => row[0] && row[0].trim() !== '').map(row => {
     const obj = {};
-    headers.forEach((h, i) => { obj[h] = row[i] ?? ''; });
+    headers.forEach((h, i) => { obj[h] = row[i] || ''; });
     return obj;
   });
 }
-function pick(row, ...keys) {
-  for (const k of keys) { if (row[k] !== undefined && row[k] !== '') return row[k]; }
+function pick(row) {
+  const keys = Array.prototype.slice.call(arguments, 1);
+  for (let i = 0; i < keys.length; i++) {
+    const k = keys[i];
+    if (row[k] !== undefined && row[k] !== '') return row[k];
+  }
   return '';
 }
 function checkAuth() {
   try {
     const s = sessionStorage.getItem('sunnyAuth');
     if (!s) return false;
-    const { timestamp } = JSON.parse(s);
-    if (Date.now() - timestamp > 8 * 60 * 60 * 1000) { sessionStorage.removeItem('sunnyAuth'); return false; }
+    const parsed = JSON.parse(s);
+    if (Date.now() - parsed.timestamp > 8 * 60 * 60 * 1000) { sessionStorage.removeItem('sunnyAuth'); return false; }
     return true;
-  } catch { return false; }
+  } catch(e) { return false; }
 }
 function getFileType(link) {
   if (!link) return { type: 'FILE', bg: '#888580' };
   const l = link.toLowerCase();
-  if (l.includes('.pdf')) return { type: 'PDF', bg: '#e53e3e' };
-  if (l.includes('.docx') || l.includes('.doc')) return { type: 'DOC', bg: '#3182ce' };
-  if (l.includes('.xlsx') || l.includes('.xls')) return { type: 'XLS', bg: '#38a169' };
-  if (l.includes('.md')) return { type: 'MD', bg: '#805ad5' };
+  if (l.indexOf('.pdf') !== -1) return { type: 'PDF', bg: '#e53e3e' };
+  if (l.indexOf('.docx') !== -1 || l.indexOf('.doc') !== -1) return { type: 'DOC', bg: '#3182ce' };
+  if (l.indexOf('.xlsx') !== -1 || l.indexOf('.xls') !== -1) return { type: 'XLS', bg: '#38a169' };
+  if (l.indexOf('.md') !== -1) return { type: 'MD', bg: '#805ad5' };
   return { type: 'FILE', bg: '#888580' };
 }
 function readLiked() {
   try { const s = sessionStorage.getItem('sunnyLiked'); return s ? new Set(JSON.parse(s)) : new Set(); }
-  catch { return new Set(); }
+  catch(e) { return new Set(); }
 }
 
 function Spinner() {
@@ -115,7 +119,8 @@ function Spinner() {
   );
 }
 
-function Logo({ size = 'md' }) {
+function Logo(props) {
+  const size = props.size || 'md';
   const big = size === 'lg';
   return (
     <div style={{ textAlign: big ? 'center' : 'left' }}>
@@ -125,22 +130,23 @@ function Logo({ size = 'md' }) {
   );
 }
 
-function PasswordGate({ onAuthenticated }) {
+function PasswordGate(props) {
+  const onAuthenticated = props.onAuthenticated;
   const [password, setPassword] = useState('');
   const [error, setError] = useState(false);
-  const submit = () => {
+  const submit = function() {
     if (password === ACCESS_PASSWORD) {
       sessionStorage.setItem('sunnyAuth', JSON.stringify({ timestamp: Date.now() }));
       onAuthenticated();
     } else { setError(true); setPassword(''); }
   };
   return (
-    <div style={{ position: 'fixed', inset: 0, background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Poppins', sans-serif", padding: 16 }}>
+    <div style={{ position: 'fixed', inset: 0, background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
       <div style={{ background: '#fff', border: '1px solid rgba(0,0,0,0.08)', borderRadius: 20, padding: '48px 40px', width: '100%', maxWidth: 420, textAlign: 'center', boxShadow: '0 4px 32px rgba(0,0,0,0.06)' }}>
         <Logo size="lg" />
         <div style={{ fontSize: 13, color: '#888580', marginTop: 6, marginBottom: 32, paddingBottom: 28, borderBottom: '1px solid rgba(0,0,0,0.06)' }}>Internal use only</div>
         <p style={{ fontSize: 14, color: '#1a1a1a', marginBottom: 16, fontWeight: 500 }}>Enter password to access Sunny Sphere</p>
-        <input type="password" value={password} autoFocus onChange={e => { setPassword(e.target.value); setError(false); }} onKeyDown={e => e.key === 'Enter' && submit()} placeholder="Password" className="form-input" style={{ marginBottom: error ? 10 : 16, textAlign: 'center', letterSpacing: '0.1em' }} />
+        <input type="password" value={password} autoFocus onChange={function(e) { setPassword(e.target.value); setError(false); }} onKeyDown={function(e) { if (e.key === 'Enter') submit(); }} placeholder="Password" className="form-input" style={{ marginBottom: error ? 10 : 16, textAlign: 'center', letterSpacing: '0.1em' }} />
         {error && <p style={{ color: '#e53e3e', fontSize: 13, marginBottom: 14, fontWeight: 500 }}>Incorrect password</p>}
         <button className="btn-gold" onClick={submit} style={{ width: '100%', padding: '13px 20px', fontSize: 15, borderRadius: 10 }}>Enter</button>
       </div>
@@ -148,7 +154,9 @@ function PasswordGate({ onAuthenticated }) {
   );
 }
 
-function NavBar({ activeTab, onTabChange }) {
+function NavBar(props) {
+  const activeTab = props.activeTab;
+  const onTabChange = props.onTabChange;
   const tabs = [
     { id: 'tools', label: '🛠 Tools' },
     { id: 'skills', label: '✨ Claude Skill Library' },
@@ -159,27 +167,31 @@ function NavBar({ activeTab, onTabChange }) {
       <div style={{ maxWidth: 1280, margin: '0 auto', padding: '12px 24px', display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
         <Logo />
         <div className="nav-tabs-center" style={{ flex: 1, display: 'flex', justifyContent: 'center', gap: 8 }}>
-          {tabs.map(t => (
-            <button key={t.id} className={`nav-tab${activeTab === t.id ? ' active' : ''}`} onClick={() => onTabChange(t.id)}>{t.label}</button>
-          ))}
+          {tabs.map(function(t) {
+            return (
+              <button key={t.id} className={'nav-tab' + (activeTab === t.id ? ' active' : '')} onClick={function() { onTabChange(t.id); }}>{t.label}</button>
+            );
+          })}
         </div>
       </div>
     </nav>
   );
 }
 
-function ToolModal({ tool, onClose }) {
+function ToolModal(props) {
+  const tool = props.tool;
+  const onClose = props.onClose;
   return (
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-      <div onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: 18, padding: 32, maxWidth: 520, width: '100%', boxShadow: '0 8px 48px rgba(0,0,0,0.18)', position: 'relative', maxHeight: '85vh', overflowY: 'auto' }}>
-        <button onClick={onClose} style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: '#888580', lineHeight: 1 }}>✕</button>
+      <div onClick={function(e) { e.stopPropagation(); }} style={{ background: '#fff', borderRadius: 18, padding: 32, maxWidth: 520, width: '100%', boxShadow: '0 8px 48px rgba(0,0,0,0.18)', position: 'relative', maxHeight: '85vh', overflowY: 'auto' }}>
+        <button onClick={onClose} style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: '#888580', lineHeight: 1 }}>&#x2715;</button>
         <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 52, height: 52, background: '#f5f5f4', borderRadius: 12, fontSize: 26, marginBottom: 16 }}>{tool.emoji || '🔧'}</div>
         <div style={{ fontSize: 11, color: '#E8A020', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>{tool.category}</div>
         <h2 style={{ fontSize: 20, fontWeight: 800, color: '#1a1a1a', marginBottom: 16, lineHeight: 1.3 }}>{tool.name}</h2>
         <p style={{ fontSize: 14, color: '#444', lineHeight: 1.7, marginBottom: 28 }}>{tool.description}</p>
         {tool.toolLink && (
           <a href={tool.toolLink} target="_blank" rel="noopener noreferrer" className="btn-gold" style={{ display: 'inline-block', padding: '12px 28px', fontSize: 14, borderRadius: 10, textDecoration: 'none' }}>
-            Open Tool →
+            Open Tool &#x2192;
           </a>
         )}
       </div>
@@ -187,26 +199,32 @@ function ToolModal({ tool, onClose }) {
   );
 }
 
-function ToolsTab({ tools, looms, onNavigateToAiId }) {
+function ToolsTab(props) {
+  const tools = props.tools;
+  const looms = props.looms;
+  const onNavigateToAiId = props.onNavigateToAiId;
   const [searchInput, setSearchInput] = useState('');
   const [activeSearch, setActiveSearch] = useState('');
   const [activeCategory, setActiveCategory] = useState('All');
   const [loomExpanded, setLoomExpanded] = useState(true);
   const [selectedTool, setSelectedTool] = useState(null);
 
-  const toolCategories = ['All', ...Array.from(new Set(tools.map(t => t.category).filter(Boolean))).sort()];
-  const applySearch = term => { setSearchInput(term); setActiveSearch(term); };
+  const toolCategories = ['All'].concat(
+    Array.from(new Set(tools.map(function(t) { return t.category; }).filter(Boolean))).sort()
+  );
 
-  const filteredTools = tools.filter(tool => {
+  const applySearch = function(term) { setSearchInput(term); setActiveSearch(term); };
+
+  const filteredTools = tools.filter(function(tool) {
     const matchCat = activeCategory === 'All' || (tool.category && tool.category.toLowerCase() === activeCategory.toLowerCase());
     const q = activeSearch.toLowerCase();
-    const matchSearch = !q || tool.name.toLowerCase().includes(q) || tool.description.toLowerCase().includes(q) || tool.tags.toLowerCase().includes(q) || (tool.category && tool.category.toLowerCase().includes(q));
+    const matchSearch = !q || tool.name.toLowerCase().indexOf(q) !== -1 || tool.description.toLowerCase().indexOf(q) !== -1 || tool.tags.toLowerCase().indexOf(q) !== -1 || (tool.category && tool.category.toLowerCase().indexOf(q) !== -1);
     return matchCat && matchSearch;
   });
 
-  const filteredLooms = looms.filter(loom =>
-    activeCategory === 'All' || (loom.category && loom.category.toLowerCase() === activeCategory.toLowerCase())
-  );
+  const filteredLooms = looms.filter(function(loom) {
+    return activeCategory === 'All' || (loom.category && loom.category.toLowerCase() === activeCategory.toLowerCase());
+  });
 
   const noResults = filteredTools.length === 0;
   const hasSearch = activeSearch.trim() !== '';
@@ -217,20 +235,24 @@ function ToolsTab({ tools, looms, onNavigateToAiId }) {
         <h1 style={{ fontSize: 34, fontWeight: 800, color: '#1a1a1a', marginBottom: 10, letterSpacing: '-0.02em' }}>Find the right AI tool ☀️</h1>
         <p style={{ color: '#888580', fontSize: 15, marginBottom: 28 }}>All your favourite AI tools and training — in one sunny place</p>
         <div className="search-bar-container" style={{ maxWidth: 560, margin: '0 auto 16px' }}>
-          <input type="text" value={searchInput} onChange={e => setSearchInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && setActiveSearch(searchInput)} placeholder="Search tools, categories, tags…" className="form-input" style={{ flex: 1 }} />
-          <button className="btn-gold" onClick={() => setActiveSearch(searchInput)}>Search</button>
+          <input type="text" value={searchInput} onChange={function(e) { setSearchInput(e.target.value); }} onKeyDown={function(e) { if (e.key === 'Enter') setActiveSearch(searchInput); }} placeholder="Search tools, categories, tags..." className="form-input" style={{ flex: 1 }} />
+          <button className="btn-gold" onClick={function() { setActiveSearch(searchInput); }}>Search</button>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, flexWrap: 'wrap' }}>
           <span style={{ fontSize: 12, color: '#888580', fontWeight: 600 }}>Popular:</span>
-          {POPULAR_SEARCHES.map(term => <button key={term} className="popular-pill" onClick={() => applySearch(term)}>{term}</button>)}
+          {POPULAR_SEARCHES.map(function(term) {
+            return <button key={term} className="popular-pill" onClick={function() { applySearch(term); }}>{term}</button>;
+          })}
         </div>
       </div>
 
       <div style={{ background: '#fff', borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
         <div style={{ maxWidth: 1280, margin: '0 auto', padding: '14px 24px', display: 'flex', gap: 8, overflowX: 'auto' }}>
-          {toolCategories.map(cat => (
-            <button key={cat} className={`filter-pill${activeCategory === cat ? ' active' : ''}`} onClick={() => setActiveCategory(cat)}>{cat}</button>
-          ))}
+          {toolCategories.map(function(cat) {
+            return (
+              <button key={cat} className={'filter-pill' + (activeCategory === cat ? ' active' : '')} onClick={function() { setActiveCategory(cat); }}>{cat}</button>
+            );
+          })}
         </div>
       </div>
 
@@ -240,7 +262,7 @@ function ToolsTab({ tools, looms, onNavigateToAiId }) {
             <div style={{ fontSize: 56, marginBottom: 18 }}>🔍</div>
             <h2 style={{ fontSize: 22, fontWeight: 700, color: '#1a1a1a', marginBottom: 10 }}>No tools found for "{activeSearch}"</h2>
             <p style={{ color: '#888580', fontSize: 15, marginBottom: 6 }}>Can't find what you're looking for?</p>
-            <button className="btn-gold" style={{ marginTop: 20, padding: '11px 28px', fontSize: 14, borderRadius: 10 }} onClick={() => onNavigateToAiId(`I was looking for a tool that can ${activeSearch}`)}>Submit to the AI Champs →</button>
+            <button className="btn-gold" style={{ marginTop: 20, padding: '11px 28px', fontSize: 14, borderRadius: 10 }} onClick={function() { onNavigateToAiId('I was looking for a tool that can ' + activeSearch); }}>Submit to the AI Champs &#x2192;</button>
           </div>
         ) : noResults ? (
           <div style={{ textAlign: 'center', padding: '60px 24px', color: '#888580' }}>
@@ -250,52 +272,58 @@ function ToolsTab({ tools, looms, onNavigateToAiId }) {
           </div>
         ) : (
           <div className="tools-grid">
-            {filteredTools.map((tool, i) => (
-              <div key={i} onClick={() => setSelectedTool(tool)} className="tool-card">
-                {tool.tags && (
-                  <div style={{ position: 'absolute', top: 12, right: 12, background: '#E8A020', color: '#1a1a1a', fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 4, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{tool.tags}</div>
-                )}
-                <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 44, height: 44, background: '#f5f5f4', borderRadius: 10, fontSize: 22, marginBottom: 14 }}>{tool.emoji || '🔧'}</div>
-                <div style={{ fontWeight: 700, fontSize: 14, color: '#1a1a1a', marginBottom: 4, lineHeight: 1.3 }}>{tool.name}</div>
-                <div style={{ fontSize: 11, color: '#E8A020', fontWeight: 600, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{tool.category}</div>
-                <div className="line-clamp-2" style={{ fontSize: 12, color: '#888580', lineHeight: 1.55 }}>{tool.description}</div>
-              </div>
-            ))}
+            {filteredTools.map(function(tool, i) {
+              return (
+                <div key={i} onClick={function() { setSelectedTool(tool); }} className="tool-card">
+                  {tool.tags && (
+                    <div style={{ position: 'absolute', top: 12, right: 12, background: '#E8A020', color: '#1a1a1a', fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 4, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{tool.tags}</div>
+                  )}
+                  <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 44, height: 44, background: '#f5f5f4', borderRadius: 10, fontSize: 22, marginBottom: 14 }}>{tool.emoji || '🔧'}</div>
+                  <div style={{ fontWeight: 700, fontSize: 14, color: '#1a1a1a', marginBottom: 4, lineHeight: 1.3 }}>{tool.name}</div>
+                  <div style={{ fontSize: 11, color: '#E8A020', fontWeight: 600, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{tool.category}</div>
+                  <div className="line-clamp-2" style={{ fontSize: 12, color: '#888580', lineHeight: 1.55 }}>{tool.description}</div>
+                </div>
+              );
+            })}
           </div>
         )}
 
         {filteredLooms.length > 0 && (
           <div style={{ marginTop: 52 }}>
             <div style={{ borderTop: '1px solid rgba(0,0,0,0.08)', marginBottom: 24 }} />
-            <button className="collapse-btn" onClick={() => setLoomExpanded(v => !v)} style={{ marginBottom: loomExpanded ? 20 : 0 }}>
+            <button className="collapse-btn" onClick={function() { setLoomExpanded(function(v) { return !v; }); }} style={{ marginBottom: loomExpanded ? 20 : 0 }}>
               <span style={{ fontSize: 11, opacity: 0.6 }}>{loomExpanded ? '▼' : '▶'}</span>
               📹 Training Videos{activeCategory !== 'All' && <span style={{ color: '#888580', fontWeight: 400 }}> — {activeCategory}</span>}
               <span style={{ fontSize: 12, fontWeight: 400, color: '#888580', marginLeft: 4 }}>({filteredLooms.length})</span>
             </button>
             {loomExpanded && (
               <div className="looms-grid">
-                {filteredLooms.map((loom, i) => (
-                  <a key={i} href={loom.loomLink || '#'} target={loom.loomLink ? '_blank' : undefined} rel="noopener noreferrer" className="loom-card">
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                      <span style={{ background: 'rgba(232,160,32,0.12)', color: '#E8A020', fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 100 }}>{loom.category}</span>
-                      {loom.duration && <span style={{ fontSize: 11, color: '#888580' }}>⏱ {loom.duration}</span>}
-                    </div>
-                    <div className="line-clamp-2" style={{ fontWeight: 600, fontSize: 13, color: '#1a1a1a', lineHeight: 1.4, marginBottom: 6 }}>{loom.title}</div>
-                    {loom.description && <div className="line-clamp-2" style={{ fontSize: 12, color: '#888580', lineHeight: 1.5 }}>{loom.description}</div>}
-                  </a>
-                ))}
+                {filteredLooms.map(function(loom, i) {
+                  return (
+                    <a key={i} href={loom.loomLink || '#'} target={loom.loomLink ? '_blank' : undefined} rel="noopener noreferrer" className="loom-card">
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                        <span style={{ background: 'rgba(232,160,32,0.12)', color: '#E8A020', fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 100 }}>{loom.category}</span>
+                        {loom.duration && <span style={{ fontSize: 11, color: '#888580' }}>&#x23F1; {loom.duration}</span>}
+                      </div>
+                      <div className="line-clamp-2" style={{ fontWeight: 600, fontSize: 13, color: '#1a1a1a', lineHeight: 1.4, marginBottom: 6 }}>{loom.title}</div>
+                      {loom.description && <div className="line-clamp-2" style={{ fontSize: 12, color: '#888580', lineHeight: 1.5 }}>{loom.description}</div>}
+                    </a>
+                  );
+                })}
               </div>
             )}
           </div>
         )}
       </div>
 
-      {selectedTool && <ToolModal tool={selectedTool} onClose={() => setSelectedTool(null)} />}
+      {selectedTool && <ToolModal tool={selectedTool} onClose={function() { setSelectedTool(null); }} />}
     </div>
   );
 }
 
-function SkillLibraryTab({ tips, skills }) {
+function SkillLibraryTab(props) {
+  const tips = props.tips;
+  const skills = props.skills;
   const [search, setSearch] = useState('');
   const [tipsTagFilter, setTipsTagFilter] = useState('All');
   const [skillsCatFilter, setSkillsCatFilter] = useState('All');
@@ -303,35 +331,41 @@ function SkillLibraryTab({ tips, skills }) {
   const [liked, setLiked] = useState(new Set());
   const [likeCounts, setLikeCounts] = useState({});
 
-  useEffect(() => { setLiked(readLiked()); }, []);
-  useEffect(() => {
-    setLikeCounts(prev => {
-      const next = { ...prev };
-      tips.forEach(t => { if (!(t.tip in next)) next[t.tip] = Number(t.likes) || 0; });
+  useEffect(function() { setLiked(readLiked()); }, []);
+  useEffect(function() {
+    setLikeCounts(function(prev) {
+      const next = Object.assign({}, prev);
+      tips.forEach(function(t) { if (!(t.tip in next)) next[t.tip] = Number(t.likes) || 0; });
       return next;
     });
   }, [tips]);
 
-  const handleLike = tip => {
+  const handleLike = function(tip) {
     if (liked.has(tip.tip)) return;
     const next = new Set(liked); next.add(tip.tip); setLiked(next);
-    try { sessionStorage.setItem('sunnyLiked', JSON.stringify([...next])); } catch {}
-    setLikeCounts(prev => ({ ...prev, [tip.tip]: (prev[tip.tip] || 0) + 1 }));
-    fetch(APPS_SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: 'like', tip: tip.tip }) }).catch(() => {});
+    try { sessionStorage.setItem('sunnyLiked', JSON.stringify(Array.from(next))); } catch(e) {}
+    setLikeCounts(function(prev) { return Object.assign({}, prev, { [tip.tip]: (prev[tip.tip] || 0) + 1 }); });
+    fetch(APPS_SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: 'like', tip: tip.tip }) }).catch(function() {});
   };
 
-  const toggleExpand = title => setExpandedTips(prev => { const n = new Set(prev); n.has(title) ? n.delete(title) : n.add(title); return n; });
+  const toggleExpand = function(title) {
+    setExpandedTips(function(prev) {
+      const n = new Set(prev);
+      if (n.has(title)) { n.delete(title); } else { n.add(title); }
+      return n;
+    });
+  };
 
-  const tipTags = ['All', ...Array.from(new Set(tips.map(t => t.tag).filter(Boolean))).sort()];
-  const skillCats = ['All', ...Array.from(new Set(skills.map(s => s.category).filter(Boolean))).sort()];
+  const tipTags = ['All'].concat(Array.from(new Set(tips.map(function(t) { return t.tag; }).filter(Boolean))).sort());
+  const skillCats = ['All'].concat(Array.from(new Set(skills.map(function(s) { return s.category; }).filter(Boolean))).sort());
   const q = search.toLowerCase();
 
-  const filteredTips = tips.filter(t => {
-    const ms = !q || t.tip.toLowerCase().includes(q) || t.content.toLowerCase().includes(q) || t.tag.toLowerCase().includes(q);
+  const filteredTips = tips.filter(function(t) {
+    const ms = !q || t.tip.toLowerCase().indexOf(q) !== -1 || t.content.toLowerCase().indexOf(q) !== -1 || t.tag.toLowerCase().indexOf(q) !== -1;
     return ms && (tipsTagFilter === 'All' || t.tag === tipsTagFilter);
   });
-  const filteredSkills = skills.filter(s => {
-    const ms = !q || s.skill.toLowerCase().includes(q) || s.category.toLowerCase().includes(q) || s.tag.toLowerCase().includes(q);
+  const filteredSkills = skills.filter(function(s) {
+    const ms = !q || s.skill.toLowerCase().indexOf(q) !== -1 || s.category.toLowerCase().indexOf(q) !== -1 || s.tag.toLowerCase().indexOf(q) !== -1;
     return ms && (skillsCatFilter === 'All' || s.category === skillsCatFilter);
   });
 
@@ -342,7 +376,7 @@ function SkillLibraryTab({ tips, skills }) {
           <h1 style={{ fontSize: 28, fontWeight: 800, color: '#1a1a1a', marginBottom: 6, letterSpacing: '-0.02em' }}>Claude Skill Library</h1>
           <p style={{ color: '#888580', fontSize: 14, marginBottom: 20 }}>Prompts, guides and tips curated by the AI Champs</p>
           <div className="search-bar-container" style={{ maxWidth: 520 }}>
-            <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search tips, skills, tags…" className="form-input" style={{ flex: 1 }} />
+            <input type="text" value={search} onChange={function(e) { setSearch(e.target.value); }} placeholder="Search tips, skills, tags..." className="form-input" style={{ flex: 1 }} />
           </div>
         </div>
       </div>
@@ -352,7 +386,9 @@ function SkillLibraryTab({ tips, skills }) {
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 4 }}>
             <h2 style={{ fontSize: 17, fontWeight: 700, color: '#1a1a1a' }}>💡 Tips &amp; Tricks</h2>
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-              {tipTags.map(tag => <button key={tag} className={`filter-pill${tipsTagFilter === tag ? ' active' : ''}`} onClick={() => setTipsTagFilter(tag)}>{tag}</button>)}
+              {tipTags.map(function(tag) {
+                return <button key={tag} className={'filter-pill' + (tipsTagFilter === tag ? ' active' : '')} onClick={function() { setTipsTagFilter(tag); }}>{tag}</button>;
+              })}
             </div>
           </div>
           {filteredTips.length === 0 ? (
@@ -361,16 +397,16 @@ function SkillLibraryTab({ tips, skills }) {
               <p style={{ fontWeight: 600, fontSize: 14 }}>No tips found</p>
               {search && <p style={{ fontSize: 13, marginTop: 4 }}>Try a different search term</p>}
             </div>
-          ) : filteredTips.map((tip, i) => {
+          ) : filteredTips.map(function(tip, i) {
             const isExpanded = expandedTips.has(tip.tip);
             const isLiked = liked.has(tip.tip);
-            const count = likeCounts[tip.tip] ?? Number(tip.likes) ?? 0;
+            const count = likeCounts[tip.tip] !== undefined ? likeCounts[tip.tip] : (Number(tip.likes) || 0);
             const TRUNC = 180;
             const needs = tip.content.length > TRUNC;
-            const display = needs && !isExpanded ? tip.content.slice(0, TRUNC) + '…' : tip.content;
+            const display = needs && !isExpanded ? tip.content.slice(0, TRUNC) + '...' : tip.content;
             return (
               <div key={i} className="tip-item">
-                <button className={`upvote-btn${isLiked ? ' liked' : ''}`} onClick={() => handleLike(tip)} disabled={isLiked}>
+                <button className={'upvote-btn' + (isLiked ? ' liked' : '')} onClick={function() { handleLike(tip); }} disabled={isLiked}>
                   <span style={{ fontSize: 14, lineHeight: 1 }}>▲</span>
                   <span style={{ fontSize: 12, fontWeight: 700 }}>{count}</span>
                 </button>
@@ -378,7 +414,7 @@ function SkillLibraryTab({ tips, skills }) {
                   <div style={{ fontWeight: 700, fontSize: 14, color: '#1a1a1a', marginBottom: 6, lineHeight: 1.4 }}>{tip.tip}</div>
                   <div style={{ fontSize: 13, color: '#888580', lineHeight: 1.6, marginBottom: 8 }}>
                     {display}
-                    {needs && <button className="read-more-btn" onClick={() => toggleExpand(tip.tip)}> {isExpanded ? 'Show less' : 'Read more'}</button>}
+                    {needs && <button className="read-more-btn" onClick={function() { toggleExpand(tip.tip); }}> {isExpanded ? 'Show less' : 'Read more'}</button>}
                   </div>
                   <div style={{ fontSize: 12, color: '#888580', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                     {tip.postedBy && <span>Shared by {tip.postedBy}</span>}
@@ -397,7 +433,9 @@ function SkillLibraryTab({ tips, skills }) {
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 20 }}>
             <h2 style={{ fontSize: 17, fontWeight: 700, color: '#1a1a1a' }}>📁 Skill Library</h2>
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-              {skillCats.map(cat => <button key={cat} className={`filter-pill${skillsCatFilter === cat ? ' active' : ''}`} onClick={() => setSkillsCatFilter(cat)}>{cat}</button>)}
+              {skillCats.map(function(cat) {
+                return <button key={cat} className={'filter-pill' + (skillsCatFilter === cat ? ' active' : '')} onClick={function() { setSkillsCatFilter(cat); }}>{cat}</button>;
+              })}
             </div>
           </div>
           {filteredSkills.length === 0 ? (
@@ -408,17 +446,17 @@ function SkillLibraryTab({ tips, skills }) {
             </div>
           ) : (
             <div className="skills-grid">
-              {filteredSkills.map((skill, i) => {
-                const { type, bg } = getFileType(skill.fileLink);
+              {filteredSkills.map(function(skill, i) {
+                const ft = getFileType(skill.fileLink);
                 return (
                   <div key={i} className="skill-card">
-                    <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: bg, color: '#fff', borderRadius: 7, padding: '4px 10px', fontSize: 11, fontWeight: 700, letterSpacing: '0.04em', marginBottom: 12, alignSelf: 'flex-start' }}>{type}</div>
+                    <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: ft.bg, color: '#fff', borderRadius: 7, padding: '4px 10px', fontSize: 11, fontWeight: 700, letterSpacing: '0.04em', marginBottom: 12, alignSelf: 'flex-start' }}>{ft.type}</div>
                     <div style={{ fontWeight: 700, fontSize: 13, color: '#1a1a1a', marginBottom: 4, lineHeight: 1.4 }}>{skill.skill}</div>
                     <div style={{ fontSize: 12, color: '#888580', marginBottom: skill.tag ? 8 : 12 }}>{skill.category}</div>
                     {skill.tag && <div style={{ marginBottom: 14 }}><span style={{ display: 'inline-block', padding: '2px 8px', border: '1px solid rgba(0,0,0,0.12)', borderRadius: 100, fontSize: 11, color: '#888580' }}>{skill.tag}</span></div>}
                     {skill.fileLink && (
                       <div style={{ marginTop: 'auto' }}>
-                        <a href={skill.fileLink} target="_blank" rel="noopener noreferrer" className="btn-gold" style={{ display: 'inline-block', padding: '6px 14px', fontSize: 12, borderRadius: 7, textDecoration: 'none' }}>{type === 'MD' ? 'Open' : 'Download'}</a>
+                        <a href={skill.fileLink} target="_blank" rel="noopener noreferrer" className="btn-gold" style={{ display: 'inline-block', padding: '6px 14px', fontSize: 12, borderRadius: 7, textDecoration: 'none' }}>{ft.type === 'MD' ? 'Open' : 'Download'}</a>
                       </div>
                     )}
                   </div>
@@ -432,16 +470,17 @@ function SkillLibraryTab({ tips, skills }) {
   );
 }
 
-function Field({ label, children }) {
+function Field(props) {
   return (
     <div>
-      <label style={{ display: 'block', fontWeight: 600, fontSize: 14, color: '#1a1a1a', marginBottom: 8 }}>{label}</label>
-      {children}
+      <label style={{ display: 'block', fontWeight: 600, fontSize: 14, color: '#1a1a1a', marginBottom: 8 }}>{props.label}</label>
+      {props.children}
     </div>
   );
 }
 
-function AiIdTab({ prefilledProblem }) {
+function AiIdTab(props) {
+  const prefilledProblem = props.prefilledProblem;
   const [name, setName] = useState('');
   const [problem, setProblem] = useState('');
   const [timeTaken, setTimeTaken] = useState('');
@@ -451,41 +490,41 @@ function AiIdTab({ prefilledProblem }) {
   const [website, setWebsite] = useState('');
   const [status, setStatus] = useState('idle');
 
-  useEffect(() => { if (prefilledProblem) setProblem(prefilledProblem); }, [prefilledProblem]);
+  useEffect(function() { if (prefilledProblem) setProblem(prefilledProblem); }, [prefilledProblem]);
 
-  const reset = () => { setName(''); setProblem(''); setTimeTaken(''); setOthersInvolved(''); setCurrentProcess(''); setIdealOutcome(''); setWebsite(''); };
+  const reset = function() { setName(''); setProblem(''); setTimeTaken(''); setOthersInvolved(''); setCurrentProcess(''); setIdealOutcome(''); setWebsite(''); };
 
-  const handleSubmit = async e => {
+  const handleSubmit = async function(e) {
     e.preventDefault(); setStatus('loading');
     try {
-      await fetch(APPS_SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ name, problem, timeTaken, othersInvolved, currentProcess, idealOutcome, website }) });
+      await fetch(APPS_SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ name: name, problem: problem, timeTaken: timeTaken, othersInvolved: othersInvolved, currentProcess: currentProcess, idealOutcome: idealOutcome, website: website }) });
       setStatus('success'); reset();
-    } catch { setStatus('error'); }
+    } catch(e) { setStatus('error'); }
   };
 
   return (
     <div style={{ maxWidth: 720, margin: '0 auto', padding: '48px 24px 80px' }}>
-      <h1 style={{ fontSize: 28, fontWeight: 800, color: '#1a1a1a', marginBottom: 10, letterSpacing: '-0.02em' }}>Could this be AI'd? 💡</h1>
-      <p style={{ color: '#888580', fontSize: 14, lineHeight: 1.6, marginBottom: 24 }}>Think a task in your workflow could be automated or improved with AI? Tell the AI Champs and we'll look into it.</p>
+      <h1 style={{ fontSize: 28, fontWeight: 800, color: '#1a1a1a', marginBottom: 10, letterSpacing: '-0.02em' }}>Could this be AI&#x27;d? 💡</h1>
+      <p style={{ color: '#888580', fontSize: 14, lineHeight: 1.6, marginBottom: 24 }}>Think a task in your workflow could be automated or improved with AI? Tell the AI Champs and we&#x27;ll look into it.</p>
       <div style={{ background: 'rgba(232,160,32,0.08)', border: '1px solid rgba(232,160,32,0.25)', borderRadius: 12, padding: '14px 18px', marginBottom: 36, fontSize: 14, color: '#1a1a1a', lineHeight: 1.5 }}>
-        ✨ Already looked for a tool and couldn't find it? You're in the right place. Tell us what you need below.
+        ✨ Already looked for a tool and couldn&#x27;t find it? You&#x27;re in the right place. Tell us what you need below.
       </div>
       {status === 'success' && <div style={{ background: 'rgba(56,161,105,0.1)', border: '1px solid rgba(56,161,105,0.35)', borderRadius: 10, padding: '14px 18px', marginBottom: 28, fontSize: 14, fontWeight: 600, color: '#276749' }}>Submitted! The AI Champs will review your task. ✅</div>}
       {status === 'error' && <div style={{ background: 'rgba(229,62,62,0.08)', border: '1px solid rgba(229,62,62,0.3)', borderRadius: 10, padding: '14px 18px', marginBottom: 28, fontSize: 14, fontWeight: 600, color: '#c53030' }}>Something went wrong — please try again.</div>}
       <form onSubmit={handleSubmit}>
         <div style={{ display: 'none' }} aria-hidden="true">
-          <input type="text" name="website" value={website} onChange={e => setWebsite(e.target.value)} tabIndex={-1} autoComplete="off" />
+          <input type="text" name="website" value={website} onChange={function(e) { setWebsite(e.target.value); }} tabIndex={-1} autoComplete="off" />
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
-          <Field label="Your name"><input type="text" value={name} onChange={e => setName(e.target.value)} placeholder="Jane Smith" className="form-input" /></Field>
-          <Field label="What problem are you wanting solved?"><textarea value={problem} onChange={e => setProblem(e.target.value)} placeholder="Describe the task or problem you'd like AI to help with…" className="form-textarea" style={{ minHeight: 110 }} /></Field>
-          <Field label="How often and how long does this take?"><textarea value={timeTaken} onChange={e => setTimeTaken(e.target.value)} placeholder="e.g. Daily, takes about 30 minutes each time" className="form-textarea" /></Field>
-          <Field label="Who else in the office does this task?"><textarea value={othersInvolved} onChange={e => setOthersInvolved(e.target.value)} placeholder="e.g. The whole account management team" className="form-textarea" /></Field>
-          <Field label="What is the current process?"><textarea value={currentProcess} onChange={e => setCurrentProcess(e.target.value)} placeholder="Walk us through the steps you currently follow…" className="form-textarea" /></Field>
-          <Field label="What is the ideal end outcome?"><textarea value={idealOutcome} onChange={e => setIdealOutcome(e.target.value)} placeholder="Describe what success looks like — what would you get back?" className="form-textarea" /></Field>
+          <Field label="Your name"><input type="text" value={name} onChange={function(e) { setName(e.target.value); }} placeholder="Jane Smith" className="form-input" /></Field>
+          <Field label="What problem are you wanting solved?"><textarea value={problem} onChange={function(e) { setProblem(e.target.value); }} placeholder="Describe the task or problem you'd like AI to help with..." className="form-textarea" style={{ minHeight: 110 }} /></Field>
+          <Field label="How often and how long does this take?"><textarea value={timeTaken} onChange={function(e) { setTimeTaken(e.target.value); }} placeholder="e.g. Daily, takes about 30 minutes each time" className="form-textarea" /></Field>
+          <Field label="Who else in the office does this task?"><textarea value={othersInvolved} onChange={function(e) { setOthersInvolved(e.target.value); }} placeholder="e.g. The whole account management team" className="form-textarea" /></Field>
+          <Field label="What is the current process?"><textarea value={currentProcess} onChange={function(e) { setCurrentProcess(e.target.value); }} placeholder="Walk us through the steps you currently follow..." className="form-textarea" /></Field>
+          <Field label="What is the ideal end outcome?"><textarea value={idealOutcome} onChange={function(e) { setIdealOutcome(e.target.value); }} placeholder="Describe what success looks like..." className="form-textarea" /></Field>
           <div style={{ marginTop: 4 }}>
             <button type="submit" className="btn-gold submit-btn" disabled={status === 'loading'} style={{ padding: '13px 32px', fontSize: 15, borderRadius: 10, opacity: status === 'loading' ? 0.65 : 1 }}>
-              {status === 'loading' ? 'Submitting…' : 'Submit to the AI Champs 🚀'}
+              {status === 'loading' ? 'Submitting...' : 'Submit to the AI Champs 🚀'}
             </button>
           </div>
         </div>
@@ -494,11 +533,12 @@ function AiIdTab({ prefilledProblem }) {
   );
 }
 
-function ErrorState({ onRetry }) {
+function ErrorState(props) {
+  const onRetry = props.onRetry;
   return (
     <div style={{ textAlign: 'center', padding: '100px 24px' }}>
       <div style={{ fontSize: 52, marginBottom: 18 }}>😕</div>
-      <p style={{ fontSize: 17, fontWeight: 700, color: '#1a1a1a', marginBottom: 8 }}>Couldn't load the hub data</p>
+      <p style={{ fontSize: 17, fontWeight: 700, color: '#1a1a1a', marginBottom: 8 }}>Couldn&#x27;t load the hub data</p>
       <p style={{ color: '#888580', fontSize: 14, marginBottom: 28, maxWidth: 320, margin: '0 auto 28px' }}>Check your internet connection and try again.</p>
       <button className="btn-gold" onClick={onRetry} style={{ padding: '11px 28px', fontSize: 14, borderRadius: 10 }}>Retry</button>
     </div>
@@ -517,39 +557,50 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [fetchError, setFetchError] = useState(false);
 
-  useEffect(() => { setIsAuthed(checkAuth()); setAuthChecked(true); }, []);
+  useEffect(function() { setIsAuthed(checkAuth()); setAuthChecked(true); }, []);
 
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async function() {
     setLoading(true); setFetchError(false);
     try {
-      const [toolsRes, loomsRes, skillsRes, tipsRes] = await Promise.all([
-        fetch(`${APPS_SCRIPT_URL}?action=tools`),
-        fetch(`${APPS_SCRIPT_URL}?action=looms`),
-        fetch(`${APPS_SCRIPT_URL}?action=skills`),
-        fetch(`${APPS_SCRIPT_URL}?action=tips`),
+      const results = await Promise.all([
+        fetch(APPS_SCRIPT_URL + '?action=tools'),
+        fetch(APPS_SCRIPT_URL + '?action=looms'),
+        fetch(APPS_SCRIPT_URL + '?action=skills'),
+        fetch(APPS_SCRIPT_URL + '?action=tips'),
       ]);
-      const [td, ld, sd, tipd] = await Promise.all([toolsRes.json(), loomsRes.json(), skillsRes.json(), tipsRes.json()]);
-      if (td.status === 'success') setTools(parseRows(td.data).map(r => ({ name: pick(r,'tool_name','name'), category: pick(r,'cateogry','category'), description: pick(r,'descriptions','description'), emoji: pick(r,'emoji')||'🔧', toolLink: pick(r,'tool_link','link','url'), tags: pick(r,'tags','tag'), status: pick(r,'status') })));
-      if (ld.status === 'success') setLooms(parseRows(ld.data).map(r => ({ title: pick(r,'title'), category: pick(r,'category'), description: pick(r,'description'), loomLink: pick(r,'loom_link','link','url'), duration: pick(r,'duration') })));
-      if (sd.status === 'success') setSkills(parseRows(sd.data).map(r => ({ skill: pick(r,'skill'), fileLink: pick(r,'file_link','link','url'), category: pick(r,'category'), tag: pick(r,'tag','tags') })));
-      if (tipd.status === 'success') setTips(parseRows(tipd.data).map(r => ({ tip: pick(r,'tip'), content: pick(r,'content'), postedBy: pick(r,'posted_by','postedby','author'), tag: pick(r,'tag','tags'), likes: parseInt(pick(r,'likes')||'0',10)||0 })));
-    } catch { setFetchError(true); }
+      const td = await results[0].json();
+      const ld = await results[1].json();
+      const sd = await results[2].json();
+      const tipd = await results[3].json();
+      if (td.status === 'success') setTools(parseRows(td.data).map(function(r) {
+        return { name: pick(r,'tool_name','name'), category: pick(r,'cateogry','category'), description: pick(r,'descriptions','description'), emoji: pick(r,'emoji') || '🔧', toolLink: pick(r,'tool_link','link','url'), tags: pick(r,'tags','tag'), status: pick(r,'status') };
+      }));
+      if (ld.status === 'success') setLooms(parseRows(ld.data).map(function(r) {
+        return { title: pick(r,'title'), category: pick(r,'category'), description: pick(r,'description'), loomLink: pick(r,'loom_link','link','url'), duration: pick(r,'duration') };
+      }));
+      if (sd.status === 'success') setSkills(parseRows(sd.data).map(function(r) {
+        return { skill: pick(r,'skill'), fileLink: pick(r,'file_link','link','url'), category: pick(r,'category'), tag: pick(r,'tag','tags') };
+      }));
+      if (tipd.status === 'success') setTips(parseRows(tipd.data).map(function(r) {
+        return { tip: pick(r,'tip'), content: pick(r,'content'), postedBy: pick(r,'posted_by','postedby','author'), tag: pick(r,'tag','tags'), likes: parseInt(pick(r,'likes') || '0', 10) || 0 };
+      }));
+    } catch(e) { setFetchError(true); }
     finally { setLoading(false); }
   }, []);
 
-  useEffect(() => { if (isAuthed) fetchData(); }, [isAuthed, fetchData]);
+  useEffect(function() { if (isAuthed) fetchData(); }, [isAuthed, fetchData]);
 
-  const handleNavigateToAiId = prefilled => { setPrefilledProblem(prefilled); setActiveTab('aiid'); };
+  const handleNavigateToAiId = function(prefilled) { setPrefilledProblem(prefilled); setActiveTab('aiid'); };
 
   if (!authChecked) return null;
-  if (!isAuthed) return <PasswordGate onAuthenticated={() => setIsAuthed(true)} />;
+  if (!isAuthed) return <PasswordGate onAuthenticated={function() { setIsAuthed(true); }} />;
 
   return (
     <div style={{ minHeight: '100vh', background: '#f9f8f6' }}>
       <NavBar activeTab={activeTab} onTabChange={setActiveTab} />
       <main>
         {loading ? <Spinner /> : fetchError ? <ErrorState onRetry={fetchData} /> : (
-          <>
+          <div>
             <div style={{ display: activeTab === 'tools' ? 'block' : 'none' }}>
               <ToolsTab tools={tools} looms={looms} onNavigateToAiId={handleNavigateToAiId} />
             </div>
@@ -559,7 +610,7 @@ function App() {
             <div style={{ display: activeTab === 'aiid' ? 'block' : 'none' }}>
               <AiIdTab prefilledProblem={prefilledProblem} />
             </div>
-          </>
+          </div>
         )}
       </main>
     </div>
